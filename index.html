@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025년도 국회도서관 원문DB 구축사업 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+        }
+        
+        /* 사이드바 스타일 */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 30px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-time {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+        
+        .menu-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .menu-item.active {
+            background: rgba(255,255,255,0.2);
+            border-left: 4px solid white;
+        }
+        
+        .menu-item i {
+            margin-right: 10px;
+        }
+        
+        .submenu {
+            background: rgba(0,0,0,0.1);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .submenu.show {
+            max-height: 400px;
+        }
+        
+        .submenu-item {
+            padding: 12px 20px 12px 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .submenu-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .submenu-item.active {
+            background: rgba(255,255,255,0.15);
+            border-left: 3px solid white;
+        }
+        
+        .arrow {
+            transition: transform 0.3s;
+            font-size: 12px;
+        }
+        
+        .arrow.down {
+            transform: rotate(90deg);
+        }
+        
+        /* 메인 콘텐츠 영역 */
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .content-header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .content-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .content-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        /* 페이지 섹션 */
+        .page-section {
+            display: none;
+        }
+        
+        .page-section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 카드 스타일 */
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        /* 테이블 스타일 */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .status-leave {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-half {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* 팀별 작업 현황 그리드 */
+        .work-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .team-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .team-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .team-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .team-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .work-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .work-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .work-item h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .work-item p {
+            color: #666;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .serial-number {
+            color: #0066cc;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* 통계 카드 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .number {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: relative;
+            background: white;
+            margin: 50px auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            animation: slideDown 0.3s;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .login-btn:hover {
+            transform: scale(1.02);
+        }
+        
+        /* 관리자 섹션 */
+        .admin-section {
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            text-align: center;
+            position: relative;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .file-label:hover {
+            transform: scale(1.05);
+        }
+
+        .file-status {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .file-info {
+            color: #666;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .work-queue-status {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .queue-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .queue-team {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .queue-count {
+            color: #666;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            
+            .main-content {
+                margin-left: 200px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <!-- SheetJS 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- 사이드바 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB１</h2>
+            <div class="sidebar-time" id="sidebarTime"></div>
+        </div>
+        
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="showPage('workers')">
+                <span>📊 작업자 현황</span>
+            </div>
+            
+            <div class="menu-item" onclick="showPage('attendance')">
+                <span>⏰ 출퇴근 현황</span>
+            </div>
+            
+            <div class="menu-item" onclick="toggleSubmenu(this)">
+                <span>💼 작업 현황</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="submenu" id="workSubmenu">
+                <div class="submenu-item" onclick="showWorkTeam('all')">전체 현황</div>
+                <div class="submenu-item" onclick="showWorkTeam('management')">사업관리팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('scan')">스캔팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('image')">이미지보정팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('toc')">TOC팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check1')">점검1팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check2')">점검2팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check3')">점검3팀</div>
+            </div>
+            
+            <div class="menu-item admin-menu" onclick="showPage('admin')" style="display: none;">
+                <span>⚙️ 관리자</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 메인 콘텐츠 -->
+    <div class="main-content">
+        <!-- 작업자 현황 페이지 -->
+        <div id="workersPage" class="page-section active">
+            <div class="content-header">
+                <h1>작업자 현황</h1>
+                <p>전체 작업자 목록 및 상태</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>전체 작업자</h3>
+                    <div class="number" id="totalWorkers">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>현재 근무중</h3>
+                    <div class="number" id="workingCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>휴가/반차</h3>
+                    <div class="number" id="leaveCount">0</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>작업자 목록</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>팀</th>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>IP</th>
+                                <th>상태</th>
+                                <th>현재 작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workerTableBody">
+                            <!-- 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 출퇴근 현황 페이지 -->
+        <div id="attendancePage" class="page-section">
+            <div class="content-header">
+                <h1>출퇴근 현황</h1>
+                <p>오늘의 출퇴근 기록</p>
+            </div>
+            
+            <div class="card">
+                <h2>출퇴근 기록</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>팀</th>
+                                <th>이름</th>
+                                <th>출근 시간</th>
+                                <th>퇴근 시간</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <!-- 동적 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 작업 현황 페이지 -->
+        <div id="workPage" class="page-section">
+            <div class="content-header">
+                <h1 id="workPageTitle">전체 작업 현황</h1>
+                <p id="workPageDesc">모든 팀의 작업 진행 상황</p>
+            </div>
+            
+            <div class="card">
+                <div id="workStatusContainer">
+                    <!-- 동적 생성 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 관리자 페이지 -->
+        <div id="adminPage" class="page-section admin-section">
+            <div class="content-header">
+                <h1>관리자 설정</h1>
+                <p>시스템 관리 및 데이터 업로드</p>
+            </div>
+            
+            <div class="card">
+                <h2>데이터 관리</h2>
+                
+                <div class="upload-section" id="excelUploadSection">
+                    <h3>통합 엑셀 파일 업로드</h3>
+                    <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+                    <label for="excelFile" class="file-label">엑셀 파일 선택</label>
+                    <p style="margin-top: 10px; color: #666;">인력구분, 연차, 작업량 시트가 포함된 엑셀 파일을 업로드하세요</p>
+                    <div id="excelFileStatus" class="file-status"></div>
+                </div>
+
+                <div class="work-queue-status" id="workQueueStatus" style="display: none;">
+                    <h3>작업 대기열 현황</h3>
+                    <div id="queueStatusContent"></div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>작업 제어</h3>
+                    <button onclick="toggleAllWork()" id="workToggleBtn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">전체 작업 중단</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 관리자 로그인 모달 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2 style="margin-bottom: 20px;">관리자 로그인</h2>
+            <div class="login-form">
+                <input type="password" id="adminPassword" placeholder="비밀번호 입력">
+                <button class="login-btn" onclick="adminLogin()">로그인</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 전역 변수
+        let workers = [];
+        let leaveStatus = {};
+        let workQueues = {
+            '사업관리팀': [],
+            '스캔팀': [],
+            '이미지보정팀': [],
+            'TOC팀': [],
+            '점검1팀': [],
+            '점검2팀': [],
+            '점검3팀': []
+        };
+        let workTimers = {};
+        let allOffDuty = false;
+        let workStopped = false;
+        let isAdmin = false;
+        let currentTeamView = 'all';
+        let currentWorkerAssignments = {};
+        
+        // 시간 업데이트
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('sidebarTime').textContent = timeString;
+        }
+        
+        // 엑셀 파일 업로드 처리
+        function setupFileUpload() {
+            const excelFileInput = document.getElementById('excelFile');
+            
+            excelFileInput.addEventListener('change', function(e) {
+                handleExcelUpload(e);
+            });
+
+            // 드래그 앤 드롭 지원
+            setupDragAndDrop('excelUploadSection', 'excelFile');
+        }
+
+        // 드래그 앤 드롭 설정
+        function setupDragAndDrop(sectionId, inputId) {
+            const section = document.getElementById(sectionId);
+            const input = document.getElementById(inputId);
+
+            section.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                section.classList.add('dragover');
+            });
+
+            section.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                section.classList.remove('dragover');
+            });
+
+            section.addEventListener('drop', function(e) {
+                e.preventDefault();
+                section.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    input.files = files;
+                    handleExcelUpload({ target: { files: files } });
+                }
+            });
+        }
+
+        // 엑셀 파일 처리
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusElement = document.getElementById('excelFileStatus');
+            statusElement.innerHTML = `<div style="color: #007bff;">파일 읽는 중... (${file.name})</div>`;
+
+            loadExcel(file, statusElement);
+        }
+
+        // 엑셀 파싱
+        function loadExcel(file, statusElement) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    let successCount = 0;
+
+                    // 1. 인력구분 시트
+                    if (workbook.Sheets['인력구분']) {
+                        const ws1 = workbook.Sheets['인력구분'];
+                        const workerData = XLSX.utils.sheet_to_json(ws1);
+                        workers = workerData.map(r => ({
+                            team: r['팀명'] || r['팀'] || '',
+                            id: r['ID'] || r['id'] || '',
+                            name: r['이름'] || r['성명'] || '',
+                            ip: r['IP'] || r['ip'] || ''
+                        })).filter(w => w.team && w.id && w.name && w.ip);
+                        successCount++;
+                    }
+
+                    // 2. 연차 시트 (엑셀 파일에서만 읽어와서 초기 데이터로 활용)
+                    if (workbook.Sheets['연차']) {
+                        const ws2 = workbook.Sheets['연차'];
+                        const leaveRows = XLSX.utils.sheet_to_json(ws2);
+                        leaveStatus = {};
+                        leaveRows.forEach(r => {
+                            if (r['ID'] && r['일자'] && r['연차']) {
+                                leaveStatus[`${r['ID']}_${r['일자']}`] = r['연차'];
+                            }
+                        });
+                        successCount++;
+                    }
+
+                    // 3. 작업량 시트
+                    if (workbook.Sheets['작업량']) {
+                        const ws3 = workbook.Sheets['작업량'];
+                        const workRows = XLSX.utils.sheet_to_json(ws3);
+                        
+                        workQueues = {
+                            '사업관리팀': [],
+                            '스캔팀': [],
+                            '이미지보정팀': [],
+                            'TOC팀': [],
+                            '점검1팀': [],
+                            '점검2팀': [],
+                            '점검3팀': []
+                        };
+
+                        // 모든 팀에 기본 작업 생성
+                        const defaultWorkCount = 50; // 각 팀당 기본 50개 작업
+                        Object.keys(workQueues).forEach(team => {
+                            for (let i = 1; i <= defaultWorkCount; i++) {
+                                const teamCode = {
+                                    '사업관리팀': 'MG',
+                                    '스캔팀': 'SC',
+                                    '이미지보정팀': 'IM',
+                                    'TOC팀': 'TC',
+                                    '점검1팀': 'C1',
+                                    '점검2팀': 'C2',
+                                    '점검3팀': 'C3'
+                                }[team];
+                                workQueues[team].push(`${teamCode}${String(i).padStart(4, '0')}`);
+                            }
+                        });
+
+                        workRows.forEach(r => {
+                            if (r['이미지 보정 대상 제어번호']) workQueues['이미지보정팀'].push(r['이미지 보정 대상 제어번호']);
+                            if (r['TOC 대상 제어번호']) workQueues['TOC팀'].push(r['TOC 대상 제어번호']);
+                            if (r['점검1차 제어번호']) workQueues['점검1팀'].push(r['점검1차 제어번호']);
+                            if (r['점검2차 제어번호']) workQueues['점검2팀'].push(r['점검2차 제어번호']);
+                            if (r['점검3차 제어번호']) workQueues['점검3팀'].push(r['점검3차 제어번호']);
+                        });
+                        successCount++;
+                    }
+
+                    if (successCount === 0) {
+                        throw new Error('필요한 시트를 찾을 수 없습니다. (인력구분, 연차, 작업량 시트 필요)');
+                    }
+
+                    // UI 업데이트
+                    updateWorkerTable();
+                    updateAttendanceTable();
+                    updateWorkStatus();
+                    updateQueueStatus();
+                    startWorkAssignments();
+
+                    statusElement.innerHTML = `
+                        <div class="success-message">✅ 업로드 완료!</div>
+                        <div class="file-info">파일: ${file.name}</div>
+                        <div class="file-info">처리된 시트: ${successCount}개</div>
+                        <div class="file-info">작업자: ${workers.length}명</div>
+                    `;
+
+                    // 작업 대기열 상태 표시
+                    document.getElementById('workQueueStatus').style.display = 'block';
+
+                } catch (error) {
+                    statusElement.innerHTML = `<div class="error-message">⚠ 처리 오류: ${error.message}</div>`;
+                }
+            };
+            
+            reader.onerror = function() {
+                statusElement.innerHTML = `<div class="error-message">⚠ 파일을 읽을 수 없습니다.</div>`;
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 작업 배정 시작 (20~40분 간격)
+        function startWorkAssignments() {
+            // 기존 타이머 정리
+            Object.values(workTimers).forEach(timer => clearInterval(timer));
+            workTimers = {};
+
+            Object.keys(workQueues).forEach(team => {
+                if (workQueues[team].length > 0) {
+                    workTimers[team] = setInterval(() => {
+                        if (allOffDuty || workStopped) return;
+                        
+                        const teamWorkers = workers.filter(w => w.team === team && isWorkerAvailable(w));
+                        if (teamWorkers.length > 0 && workQueues[team].length > 0) {
+                            const serial = workQueues[team].shift();
+                            const worker = teamWorkers[Math.floor(Math.random() * teamWorkers.length)];
+                            assignWork(team, worker, serial);
+                        }
+                    }, (Math.random() * 20 + 20) * 60 * 1000); // 20-40분
+                }
+            });
+        }
+
+        // 작업자 가용성 확인
+        function isWorkerAvailable(worker) {
+            const attendance = generateAttendance(worker);
+            return attendance.status !== '연차' && attendance.status !== '퇴근';
+        }
+
+        // 작업 배정
+        function assignWork(team, worker, serial) {
+            currentWorkerAssignments[worker.id] = {
+                team: team,
+                serial: serial,
+                assignedAt: new Date()
+            };
+            
+            updateWorkerTable();
+            updateWorkStatus();
+            updateQueueStatus();
+            
+            // 일정 시간 후 작업 완료 처리 (30분~2시간)
+            setTimeout(() => {
+                if (currentWorkerAssignments[worker.id] && currentWorkerAssignments[worker.id].serial === serial) {
+                    delete currentWorkerAssignments[worker.id];
+                    updateWorkerTable();
+                    updateWorkStatus();
+                }
+            }, (Math.random() * 90 + 30) * 60 * 1000); // 30분~2시간
+        }
+
+        // 작업 대기열 상태 업데이트
+        function updateQueueStatus() {
+            const queueContent = document.getElementById('queueStatusContent');
+            if (!queueContent) return;
+
+            let content = '';
+            
+            Object.keys(workQueues).forEach(team => {
+                const count = workQueues[team].length;
+                content += `
+                    <div class="queue-info">
+                        <span class="queue-team">${team}</span>
+                        <span class="queue-count">${count}개 대기</span>
+                    </div>
+                `;
+            });
+
+            queueContent.innerHTML = content;
+        }
+        
+        // 페이지 전환
+        function showPage(pageName) {
+            // 모든 페이지 숨기기
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // 모든 메뉴 아이템 비활성화
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 선택한 페이지 표시
+            if (pageName === 'workers') {
+                document.getElementById('workersPage').classList.add('active');
+                document.querySelectorAll('.menu-item')[0].classList.add('active');
+            } else if (pageName === 'attendance') {
+                document.getElementById('attendancePage').classList.add('active');
+                document.querySelectorAll('.menu-item')[1].classList.add('active');
+            } else if (pageName === 'admin' && isAdmin) {
+                document.getElementById('adminPage').classList.add('active');
+                document.querySelector('.admin-menu').classList.add('active');
+            }
+        }
+        
+        // 서브메뉴 토글
+        function toggleSubmenu(menuItem) {
+            const submenu = document.getElementById('workSubmenu');
+            const arrow = menuItem.querySelector('.arrow');
+            
+            submenu.classList.toggle('show');
+            arrow.classList.toggle('down');
+            
+            // 서브메뉴가 열리면 전체 현황 표시
+            if (submenu.classList.contains('show')) {
+                showWorkTeam('all');
+            }
+        }
+        
+        // 팀별 작업 현황 표시
+        function showWorkTeam(team) {
+            // 페이지 전환
+            document.querySelectorAll('.page-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('workPage').classList.add('active');
+            
+            // 메뉴 활성화
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelectorAll('.menu-item')[2].classList.add('active');
+            
+            // 서브메뉴 아이템 활성화
+            document.querySelectorAll('.submenu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentTeamView = team;
+            
+            // 제목 업데이트
+            const titles = {
+                'all': '전체 작업 현황',
+                'management': '사업관리팀 작업 현황',
+                'scan': '스캔팀 작업 현황',
+                'image': '이미지보정팀 작업 현황',
+                'toc': 'TOC팀 작업 현황',
+                'check1': '점검1팀 작업 현황',
+                'check2': '점검2팀 작업 현황',
+                'check3': '점검3팀 작업 현황'
+            };
+            
+            const descriptions = {
+                'all': '모든 팀의 작업 진행 상황',
+                'management': '사업관리팀 작업 진행 상황',
+                'scan': '스캔팀 작업 진행 상황',
+                'image': '이미지보정팀 작업 진행 상황',
+                'toc': 'TOC팀 작업 진행 상황',
+                'check1': '점검1팀 작업 진행 상황',
+                'check2': '점검2팀 작업 진행 상황',
+                'check3': '점검3팀 작업 진행 상황'
+            };
+            
+            document.getElementById('workPageTitle').textContent = titles[team];
+            document.getElementById('workPageDesc').textContent = descriptions[team];
+            
+            updateWorkStatus();
+        }
+        
+        // 랜덤 시간 생성
+        function getRandomTime(startHour, startMin, endHour, endMin) {
+            const start = startHour * 60 + startMin;
+            const end = endHour * 60 + endMin;
+            const randomMin = Math.floor(Math.random() * (end - start + 1)) + start;
+            const hour = Math.floor(randomMin / 60);
+            const min = randomMin % 60;
+            return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        }
+        
+        // 출퇴근 시간 생성
+        function generateAttendance(worker, date = new Date()) {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+            
+            // 연차 데이터에서 오늘 날짜의 연차 정보 확인 (엑셀에서 읽어온 데이터만 활용)
+            let todayLeaveStatus = null;
+            Object.keys(leaveStatus).forEach(key => {
+                const [workerId, leaveDate] = key.split('_');
+                let formattedLeaveDate = leaveDate;
+                if (leaveDate && !leaveDate.includes('-')) {
+                    const excelDate = new Date((leaveDate - 25569) * 86400 * 1000);
+                    formattedLeaveDate = excelDate.toISOString().split('T')[0];
+                }
+                
+                if (workerId === worker.id && formattedLeaveDate === todayStr) {
+                    todayLeaveStatus = leaveStatus[key];
+                }
+            });
+            
+            // 퇴근 시간 체크 (오후 6시 이후)
+            const currentHour = today.getHours();
+            
+            if (todayLeaveStatus) {
+                if (todayLeaveStatus === '연차') {
+                    return {name: worker.name, team: worker.team, checkIn: '연차', checkOut: '연차', status: '연차'};
+                } else if (todayLeaveStatus === '오전반차') {
+                    return {
+                        name: worker.name,
+                        team: worker.team,
+                        checkIn: getRandomTime(13, 30, 14, 0),
+                        checkOut: currentHour >= 18 ? getRandomTime(17, 50, 18, 10) : '-',
+                        status: '오전반차'
+                    };
+                } else if (todayLeaveStatus === '오후반차') {
+                    return {
+                        name: worker.name,
+                        team: worker.team,
+                        checkIn: getRandomTime(8, 30, 9, 0),
+                        checkOut: getRandomTime(14, 0, 14, 10),
+                        status: '오후반차'
+                    };
+                }
+            }
+            
+            return {
+                name: worker.name,
+                team: worker.team,
+                checkIn: getRandomTime(8, 30, 9, 0),
+                checkOut: currentHour >= 18 ? getRandomTime(17, 50, 18, 10) : '-',
+                status: currentHour >= 18 ? '퇴근' : 'normal'
+            };
+        }
+        
+        // 작업자 테이블 업데이트
+        function updateWorkerTable() {
+            const tbody = document.getElementById('workerTableBody');
+            tbody.innerHTML = '';
+            
+            let workingCount = 0;
+            let leaveCount = 0;
+            
+            workers.forEach(worker => {
+                const attendance = generateAttendance(worker);
+                
+                if (attendance.status === '연차' || attendance.status === '오전반차' || attendance.status === '오후반차') {
+                    leaveCount++;
+                } else if (attendance.status !== '퇴근') {
+                    workingCount++;
+                }
+                
+                const currentWork = currentWorkerAssignments[worker.id];
+                
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${worker.team}</td>
+                    <td>${worker.id}</td>
+                    <td>${worker.name}</td>
+                    <td>${worker.ip}</td>
+                    <td>${attendance.status === '연차' ? 
+                        '<span class="status-badge status-leave">연차</span>' : 
+                        attendance.status === '오전반차' ? 
+                        '<span class="status-badge status-half">오전반차</span>' : 
+                        attendance.status === '오후반차' ? 
+                        '<span class="status-badge status-half">오후반차</span>' : 
+                        attendance.status === '퇴근' ?
+                        '<span style="color: #999;">퇴근</span>' :
+                        `<span style="color: #28a745;">근무중</span>`
+                    }</td>
+                    <td>${currentWork ? 
+                        `<span class="serial-number">${currentWork.serial}</span>` : 
+                        '<span style="color: #999;">대기중</span>'
+                    }</td>
+                `;
+            });
+            
+            // 통계 업데이트
+            document.getElementById('totalWorkers').textContent = workers.length;
+            document.getElementById('workingCount').textContent = workingCount;
+            document.getElementById('leaveCount').textContent = leaveCount;
+        }
+        
+        // 출퇴근 테이블 업데이트
+        function updateAttendanceTable() {
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+            
+            workers.forEach(worker => {
+                const attendance = generateAttendance(worker);
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${attendance.team}</td>
+                    <td>${attendance.name}</td>
+                    <td>${attendance.checkIn}</td>
+                    <td>${attendance.checkOut}</td>
+                    <td><span class="status-badge ${attendance.status === '연차' ? 'status-leave' : 
+                        attendance.status === 'normal' ? '' : 'status-half'}">${
+                        attendance.status === '연차' ? '연차' : 
+                        attendance.status === '오전반차' ? '오전반차' : 
+                        attendance.status === '오후반차' ? '오후반차' : 
+                        attendance.status === '퇴근' ? '퇴근' : '정상'
+                    }</span></td>
+                `;
+            });
+        }
+        
+        // 작업 현황 업데이트
+        function updateWorkStatus() {
+            const container = document.getElementById('workStatusContainer');
+            container.innerHTML = '';
+            
+            // 팀별 그룹화
+            const teamMap = {
+                'management': '사업관리팀',
+                'scan': '스캔팀',
+                'image': '이미지보정팀',
+                'toc': 'TOC팀',
+                'check1': '점검1팀',
+                'check2': '점검2팀',
+                'check3': '점검3팀'
+            };
+            
+            if (currentTeamView === 'all') {
+                // 전체 현황 - 팀별로 구분하여 표시
+                const teamsToShow = ['사업관리팀', '스캔팀', '이미지보정팀', 'TOC팀', '점검1팀', '점검2팀', '점검3팀'];
+                
+                teamsToShow.forEach(teamName => {
+                    const teamWorkers = workers.filter(w => w.team === teamName);
+                    const workingWorkers = teamWorkers.filter(w => {
+                        const attendance = generateAttendance(w);
+                        return attendance.status !== '연차' && attendance.status !== '퇴근';
+                    });
+                    
+                    if (workingWorkers.length > 0) {
+                        // 팀 섹션 생성
+                        const teamSection = document.createElement('div');
+                        teamSection.className = 'team-section';
+                        
+                        const teamHeader = document.createElement('div');
+                        teamHeader.className = 'team-header';
+                        teamHeader.innerHTML = `
+                            <div class="team-title">${teamName}</div>
+                            <div class="team-count">${workingWorkers.length}명</div>
+                        `;
+                        teamSection.appendChild(teamHeader);
+                        
+                        // 팀원 그리드
+                        const teamGrid = document.createElement('div');
+                        teamGrid.className = 'work-status-grid';
+                        
+                        workingWorkers.forEach(worker => {
+                            const div = document.createElement('div');
+                            div.className = 'work-item';
+                            const currentWork = currentWorkerAssignments[worker.id];
+                            
+                            // 사업관리팀과 스캔팀은 항상 "작업중" 상태로 표시
+                            if (teamName === '사업관리팀' || teamName === '스캔팀') {
+                                div.innerHTML = `
+                                    <h4>${worker.name} (${worker.id})</h4>
+                                    <p><strong>IP:</strong> ${worker.ip}</p>
+                                    <p><strong>상태:</strong> 작업중</p>
+                                `;
+                                teamGrid.appendChild(div);
+                            } else if (currentWork) {
+                                // 다른 팀은 실제 작업이 배정된 경우에만 표시
+                                div.innerHTML = `
+                                    <h4>${worker.name} (${worker.id})</h4>
+                                    <p><strong>IP:</strong> ${worker.ip}</p>
+                                    <p><strong>작업 대상:</strong> <span class="serial-number">${currentWork.serial}</span></p>
+                                `;
+                                teamGrid.appendChild(div);
+                            }
+                        });
+                        
+                        teamSection.appendChild(teamGrid);
+                        container.appendChild(teamSection);
+                    }
+                });
+            } else {
+                // 특정 팀 현황
+                const targetTeam = teamMap[currentTeamView];
+                const teamWorkers = workers.filter(w => w.team === targetTeam);
+                const workingWorkers = teamWorkers.filter(w => {
+                    const attendance = generateAttendance(w);
+                    return attendance.status !== '연차' && attendance.status !== '퇴근' && 
+                           attendance.status !== '오전반차' && attendance.status !== '오후반차';
+                });
+                
+                const teamGrid = document.createElement('div');
+                teamGrid.className = 'work-status-grid';
+                
+                workingWorkers.forEach(worker => {
+                    const div = document.createElement('div');
+                    div.className = 'work-item';
+                    const currentWork = currentWorkerAssignments[worker.id];
+                    
+                    // 팀별로 다른 작업 상태 표시
+                    if (targetTeam === '사업관리팀' || targetTeam === '스캔팀') {
+                        // 사업관리팀, 스캔팀은 항상 "작업중"
+                        div.innerHTML = `
+                            <h4>${worker.name} (${worker.id})</h4>
+                            <p><strong>IP:</strong> ${worker.ip}</p>
+                            <p><strong>상태:</strong> 작업중</p>
+                        `;
+                    } else if (currentWork) {
+                        // 이미지보정팀, TOC팀, 점검팀들은 제어번호 표시
+                        div.innerHTML = `
+                            <h4>${worker.name} (${worker.id})</h4>
+                            <p><strong>IP:</strong> ${worker.ip}</p>
+                            <p><strong>상태:</strong> <span class="serial-number">${currentWork.serial}</span></p>
+                        `;
+                    } else {
+                        // 작업 대기중
+                        div.innerHTML = `
+                            <h4>${worker.name} (${worker.id})</h4>
+                            <p><strong>IP:</strong> ${worker.ip}</p>
+                            <p><strong>상태:</strong> 작업 대기중</p>
+                        `;
+                    }
+                    teamGrid.appendChild(div);
+                });
+                
+                container.appendChild(teamGrid);
+            }
+        }
+
+        // 출퇴근 상태 업데이트 (1초마다)
+        function updateAttendanceStatus() {
+            const now = new Date();
+            let activeWorkers = 0;
+
+            workers.forEach(w => {
+                const att = generateAttendance(w, now);
+                if (att.status !== '퇴근' && att.status !== '연차') activeWorkers++;
+            });
+
+            if (activeWorkers === 0 && !allOffDuty) {
+                allOffDuty = true; // 전원 퇴근 → 작업 중단
+                console.log('전원 퇴근으로 작업 중단');
+            } else if (activeWorkers > 0 && allOffDuty) {
+                allOffDuty = false; // 출근자 발생 → 작업 재개
+                console.log('출근자 발생으로 작업 재개');
+            }
+        }
+
+        // 작업 제어
+        function toggleAllWork() {
+            workStopped = !workStopped;
+            const btn = document.getElementById('workToggleBtn');
+            
+            if (workStopped) {
+                btn.textContent = '전체 작업 재개';
+                btn.style.background = '#28a745';
+                Object.values(workTimers).forEach(timer => clearInterval(timer));
+            } else {
+                btn.textContent = '전체 작업 중단';
+                btn.style.background = '#dc3545';
+                startWorkAssignments();
+            }
+        }
+        
+        // 관리자 로그인
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'admin1234') {
+                isAdmin = true;
+                document.querySelector('.admin-menu').style.display = 'block';
+                closeModal();
+                showPage('admin');
+            } else {
+                alert('⚠ 비밀번호가 틀렸습니다.');
+            }
+        }
+        
+        // 모달 열기/닫기
+        function openModal() {
+            document.getElementById('loginModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        // 키보드 단축키
+        let keySequence = [];
+        document.addEventListener('keydown', function(e) {
+            keySequence.push(e.key);
+            keySequence = keySequence.slice(-6);
+            
+            // Ctrl+Shift+M
+            if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+                openModal();
+                e.preventDefault();
+            }
+            
+            // 'admin' 입력
+            if (keySequence.join('').toLowerCase().includes('admin')) {
+                openModal();
+                keySequence = [];
+            }
+        });
+        
+        // 초기화
+        function init() {
+            updateTime();
+            setupFileUpload();
+            updateWorkerTable();
+            updateAttendanceTable();
+            updateWorkStatus();
+            
+            // 1초마다 시간 업데이트 및 출퇴근 상태 확인
+            setInterval(() => {
+                updateTime();
+                updateAttendanceStatus();
+                updateWorkerTable();
+            }, 1000);
+        }
+        
+        // 페이지 로드시 초기화
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
