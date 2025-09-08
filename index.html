@@ -1000,8 +1000,15 @@
             
             if (todayLeaveStatus === '오전반차') {
                 if (currentTime >= 13 * 60 + 30 && !record.checkInTime) {
-                    record.checkInTime = getRandomTime(13, 30, 14, 0, wid, today);
-                    record.isWorkingHours = true;
+                    // record.checkInTime = getRandomTime(13, 30, 14, 0, wid, today);
+                    // record.isWorkingHours = true;
+                    // 예외처리 시트에서만 출근시간 가져오기
+                    const exceptionKey = `${wid}_${todayStr}`;
+                    const exceptionRecord = exceptionData[exceptionKey];
+                    record.checkInTime = exceptionRecord?.checkInTime || null;
+                    if (record.checkInTime) {
+                        record.isWorkingHours = true;
+                    }
                 }
                 if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
                     record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
@@ -1011,16 +1018,21 @@
                     name: worker.name, team: worker.team,
                     checkIn: record.checkInTime || '오전반차',
                     checkOut: record.checkOutTime || '-',
-                    status: record.checkInTime 
-                        ? (record.checkOutTime ? '퇴근' : '오전반차')  // 출근 이후엔 정상/퇴근
-                        : '오전반차'
+                    status: '오전반차'   // ✅ 항상 오전반차로 유지
                 };
             }
             
             if (todayLeaveStatus === '오후반차') {
                 if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
-                    record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
-                    record.isWorkingHours = true;
+                    // record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
+                    // record.isWorkingHours = true;
+                    // 예외처리 시트에서만 출근시간 가져오기
+                    const exceptionKey = `${wid}_${todayStr}`;
+                    const exceptionRecord = exceptionData[exceptionKey];
+                    record.checkInTime = exceptionRecord?.checkInTime || null;
+                    if (record.checkInTime) {
+                        record.isWorkingHours = true;
+                    }
                 }
                 if (currentTime >= 14 * 60 && record.isWorkingHours && !record.checkOutTime) {
                     record.checkOutTime = getRandomTime(14, 0, 14, 10, wid, today);
@@ -1041,21 +1053,8 @@
             const exceptionRecord = exceptionData[exceptionKey];
 
             if (exceptionRecord) {
-                console.log(`${worker.name} 예외처리 적용:`, exceptionRecord);
-                
-                // 출퇴근 기록 키
-                const recordKey = `${wid}_${todayStr}`;
-                
-                if (!attendanceRecords[recordKey]) {
-                    attendanceRecords[recordKey] = {
-                        checkInTime: null,
-                        checkOutTime: null,
-                        isWorkingHours: false
-                    };
-                }
-                
-                const record = attendanceRecords[recordKey];
-                
+                console.log(`${worker.name} 예외처리 적용:`, exceptionRecord);                
+               
                 // 예외처리에서 설정된 출근시간 사용 (해당 시간이 되어야 출근 처리)
                 const [exHour, exMin] = exceptionRecord.checkInTime.split(':').map(Number);
                 const exceptionTime = exHour * 60 + exMin;
@@ -1089,8 +1088,15 @@
                     const endTime = eh * 60 + em;
 
                     if (currentTime >= startTime && !record.checkInTime) {
-                        record.checkInTime = getRandomTime(sh, Math.max(0, sm - 30), sh, sm, wid, today);
-                        record.isWorkingHours = true;
+                        // record.checkInTime = getRandomTime(sh, Math.max(0, sm - 30), sh, sm, wid, today);
+                        // record.isWorkingHours = true;
+                        // 예외처리 시트에서만 출근시간 가져오기
+                        const exceptionKey = `${wid}_${todayStr}`;
+                        const exceptionRecord = exceptionData[exceptionKey];
+                        record.checkInTime = exceptionRecord?.checkInTime || null;
+                        if (record.checkInTime) {
+                            record.isWorkingHours = true;
+                        }
                     }
                     if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
                         record.checkOutTime = getRandomTime(eh, em, eh, em + 10, wid, today);
@@ -1109,8 +1115,15 @@
                     const endTime = eh * 60 + em;
                     
                     if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
-                        record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
-                        record.isWorkingHours = true;
+                        // record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
+                        // record.isWorkingHours = true;
+                        // 예외처리 시트에서만 출근시간 가져오기
+                        const exceptionKey = `${wid}_${todayStr}`;
+                        const exceptionRecord = exceptionData[exceptionKey];
+                        record.checkInTime = exceptionRecord?.checkInTime || null;
+                        if (record.checkInTime) {
+                            record.isWorkingHours = true;
+                        }
                     }
                     
                     // 18시 1분 이후에만 야근 상태로 처리
@@ -1140,8 +1153,15 @@
 
             // 기본 정상 근무
             if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
-                record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
-                record.isWorkingHours = true;
+                // record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
+                // record.isWorkingHours = true;
+                // 예외처리 시트에서만 출근시간 가져오기
+                const exceptionKey = `${wid}_${todayStr}`;
+                const exceptionRecord = exceptionData[exceptionKey];
+                record.checkInTime = exceptionRecord?.checkInTime || null;
+                if (record.checkInTime) {
+                    record.isWorkingHours = true;
+                }
             }
             
             if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
@@ -1260,7 +1280,7 @@
                 if (worker.team === '사업관리팀' || worker.team === '스캔팀') {
                     if (
                         (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
-                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-')
+                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-' && attendance.checkOut === '-')
                     ) {
                         workHtml = '<span style="color: #28a745;">작업중</span>';
                     } else {
@@ -1270,7 +1290,7 @@
                     if (
                         currentWork &&
                         (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
-                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-')
+                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-' && attendance.checkOut === '-')
                     ) {
                         workHtml = `<span class="serial-number">${currentWork}</span>`;
                     } else {
