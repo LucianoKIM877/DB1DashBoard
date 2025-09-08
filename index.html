@@ -431,6 +431,30 @@
             color: #999;
         }
         
+        /* 보안 주의사항 카드 */
+        .security-notice {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-left: 5px solid #ff5252;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
+        }
+
+        .security-notice h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .security-notice p {
+            margin: 5px 0;
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
         /* 반응형 디자인 */
         @media (max-width: 768px) {
             .sidebar {
@@ -459,7 +483,7 @@
     <!-- 사이드바 -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>2025년도 국회도서관<br>원문DB 구축사업 DBⅠ</h2>
+            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB1</h2>
             <div class="sidebar-time" id="sidebarTime"></div>
         </div>
         
@@ -477,20 +501,25 @@
                 <span class="arrow">▶</span>
             </div>
             <div class="submenu" id="workSubmenu">
-                <div class="submenu-item" onclick="showWorkTeam('all')">전체 현황</div>
-                <div class="submenu-item" onclick="showWorkTeam('management')">사업관리팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('scan')">스캔팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('image')">이미지보정팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('toc')">TOC팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('check1')">점검1팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('check2')">점검2팀</div>
-                <div class="submenu-item" onclick="showWorkTeam('check3')">점검3팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('all', this)">전체 현황</div>
+                <div class="submenu-item" onclick="showWorkTeam('management', this)">사업관리팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('scan', this)">스캔팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('image', this)">이미지보정팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('toc', this)">TOC팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check1', this)">점검1팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check2', this)">점검2팀</div>
+                <div class="submenu-item" onclick="showWorkTeam('check3', this)">점검3팀</div>
             </div>
         </div>
     </div>
     
     <!-- 메인 콘텐츠 -->
     <div class="main-content">
+        <!-- 보안 주의사항 카드 -->
+        <div class="security-notice">
+            <h3>🔒 보안 주의사항</h3>
+            <p>본 시스템의 접속 URL은 보안상 보호가 필요하므로 외부 공유를 삼가 주시기 바랍니다.</p>
+        </div>
         <!-- 작업자 현황 페이지 -->
         <div id="workersPage" class="page-section active">
             <div class="content-header">
@@ -554,7 +583,7 @@
     <script>
         // 설정 중앙화
         const CONFIG = {
-            sheetId: "1gX0iaVZoVqVqdJDNwFE6l9owMOivGOq3FYGegU9qfrc",
+            sheetId: "1l-hw0hAOf-bF1A9znReWjjeYskNywnr1gceX_K60-_o",
             apiKey: "AIzaSyAEjtq3ThzW2QykAVjb-kXT274afMijZ8E",
             refreshInterval: 60000, // 1분
             maxRetries: 3,
@@ -576,6 +605,7 @@
         };
         let currentTeamView = 'all';
         let specialWork = {};
+        let exceptionData = {};
         let dataLoaded = false;
         let attendanceRecords = {};
         let lastDateCheck = formatDateLocal(new Date());
@@ -583,6 +613,10 @@
         
         // 디바운싱을 위한 타이머
         let updateTimeout;
+        
+        // 성능 최적화를 위한 캐시
+        let attendanceCache = new Map();
+        let cacheTimestamp = 0;
         
         // 로딩 오버레이 제어
         function showLoading() {
@@ -608,11 +642,45 @@
             if (updateTimeout) clearTimeout(updateTimeout);
             updateTimeout = setTimeout(() => {
                 if (dataLoaded) {
+                    // 캐시 무효화 및 새로운 캐시 생성
+                    invalidateAttendanceCache();
+                    buildAttendanceCache();
+                    
                     updateWorkerTable();
                     updateAttendanceTable();
                     updateWorkStatus();
                 }
             }, 100);
+        }
+        
+        // 출석 캐시 무효화
+        function invalidateAttendanceCache() {
+            attendanceCache.clear();
+            cacheTimestamp = Date.now();
+        }
+        
+        // 출석 캐시 구축 (한 번에 모든 작업자의 출석 정보 계산)
+        function buildAttendanceCache() {
+            const currentTime = Date.now();
+            
+            // 이미 최신 캐시가 있으면 재사용
+            if (attendanceCache.size > 0 && (currentTime - cacheTimestamp) < 5000) {
+                return;
+            }
+            
+            attendanceCache.clear();
+            
+            workers.forEach(worker => {
+                const attendance = generateAttendance(worker);
+                attendanceCache.set(worker.id, attendance);
+            });
+            
+            cacheTimestamp = currentTime;
+        }
+        
+        // 캐시된 출석 정보 가져오기
+        function getCachedAttendance(workerId) {
+            return attendanceCache.get(workerId);
         }
         
         // 시간 업데이트
@@ -641,7 +709,11 @@
                 // 출퇴근 기록 및 작업 할당 초기화
                 attendanceRecords = {};
                 workerAssignments = {};
+                exceptionData = {};
                 lastDateCheck = currentDate;
+                
+                // 캐시 무효화
+                invalidateAttendanceCache();
                 
                 if (dataLoaded) {
                     debouncedUpdate();
@@ -667,14 +739,24 @@
             let v = String(s || '').trim();
             if (!v) return null;
             
-            if (/^\d{8}$/.test(v)) {
-                v = v.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
-            }
+            // 다양한 구분자를 하이픈으로 통일
             v = v.replace(/[.\/]/g, '-');
             
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+            // YYYY-M-D 형식을 YYYY-MM-DD로 변환
+            const parts = v.split('-');
+            if (parts.length === 3) {
+                const [year, month, day] = parts;
+                if (year.length === 4 && month.length <= 2 && day.length <= 2) {
+                    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+            }
             
-            return v;
+            // YYYYMMDD 형식
+            if (/^\d{8}$/.test(v)) {
+                return v.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+            }
+            
+            return null;
         }
 
         // 작업자의 현재 작업 가져오기 (연속성 유지)
@@ -695,7 +777,7 @@
             }
             
             const teamWorkers = workers.filter(w => 
-                w.team === worker.team && isWorkerWorking(w)
+                w.team === worker.team && isWorkerWorkingCached(w)
             );
             
             const assignedNumbers = Object.values(workerAssignments).filter(num => teamQueue.includes(num));
@@ -714,10 +796,24 @@
             return assignedNumber;
         }
 
-        // 작업자가 근무 중인지 확인
+        // 캐시를 사용하는 작업자 근무 상태 확인 (최적화)
+        function isWorkerWorkingCached(worker) {
+            const attendance = getCachedAttendance(worker.id);
+            if (!attendance) return false;
+            
+            return ['정상','특근','야근'].includes(attendance.status) && 
+                attendance.status !== '출근대기' && 
+                attendance.status !== '특근대기' &&
+                attendance.checkIn !== '-';
+        }
+        
+        // 기존 isWorkerWorking 함수 (호환성 유지)
         function isWorkerWorking(worker) {
             const attendance = generateAttendance(worker);
-            return ['정상','특근','야근'].includes(attendance.status);
+            return ['정상','특근','야근'].includes(attendance.status) && 
+                attendance.status !== '출근대기' && 
+                attendance.status !== '특근대기' &&
+                attendance.checkIn !== '-';
         }
         
         // 페이지 전환
@@ -753,7 +849,7 @@
         }
         
         // 팀별 작업 현황 표시
-        function showWorkTeam(team) {
+        function showWorkTeam(team, clickedElement = null) {
             document.querySelectorAll('.page-section').forEach(section => {
                 section.classList.remove('active');
             });
@@ -767,7 +863,27 @@
             document.querySelectorAll('.submenu-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.target.classList.add('active');
+            
+            // 클릭된 요소가 전달된 경우에만 active 클래스 추가
+            if (clickedElement) {
+                clickedElement.classList.add('active');
+            } else {
+                // 기본적으로 해당 팀의 메뉴 항목을 찾아서 active 설정
+                const teamMenuMap = {
+                    'all': 0,
+                    'management': 1,
+                    'scan': 2,
+                    'image': 3,
+                    'toc': 4,
+                    'check1': 5,
+                    'check2': 6,
+                    'check3': 7
+                };
+                const submenuItems = document.querySelectorAll('.submenu-item');
+                if (submenuItems[teamMenuMap[team]]) {
+                    submenuItems[teamMenuMap[team]].classList.add('active');
+                }
+            }
             
             currentTeamView = team;
             
@@ -852,11 +968,20 @@
                 return { name: worker.name, team: worker.team, checkIn: '-', checkOut: '-', status: '휴무' };
             }
 
-            // 연차 / 반차
+                        // 연차 / 반차
             const leaveKey = `${wid}_${todayStr}`;
             const todayLeaveStatus = leaveStatus[leaveKey];
-            
+
+            console.log(`${worker.name} 연차 체크:`, {
+                workerId: wid,
+                date: todayStr,
+                key: leaveKey,
+                status: todayLeaveStatus,
+                allLeaveStatus: Object.keys(leaveStatus).filter(k => k.startsWith(wid + '_'))
+            });
+
             if (todayLeaveStatus === '연차') {
+                console.log(`${worker.name} 연차 적용`);
                 return { name: worker.name, team: worker.team, checkIn: '연차', checkOut: '연차', status: '연차' };
             }
             
@@ -879,20 +1004,22 @@
                     record.isWorkingHours = true;
                 }
                 if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
-                    record.checkOutTime = getRandomTime(17, 50, 18, 10, wid, today);
+                    record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
                 }
                 
                 return {
                     name: worker.name, team: worker.team,
-                    checkIn: record.checkInTime || '-',
+                    checkIn: record.checkInTime || '오전반차',
                     checkOut: record.checkOutTime || '-',
-                    status: record.checkOutTime ? '퇴근' : (record.checkInTime ? '정상' : '오전반차')
+                    status: record.checkInTime 
+                        ? (record.checkOutTime ? '퇴근' : '오전반차')  // 출근 이후엔 정상/퇴근
+                        : '오전반차'
                 };
             }
             
             if (todayLeaveStatus === '오후반차') {
-                if (currentTime >= 8 * 60 + 30 && !record.checkInTime) {
-                    record.checkInTime = getRandomTime(8, 30, 9, 0, wid, today);
+                if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
+                    record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
                     record.isWorkingHours = true;
                 }
                 if (currentTime >= 14 * 60 && record.isWorkingHours && !record.checkOutTime) {
@@ -902,8 +1029,53 @@
                 return {
                     name: worker.name, team: worker.team,
                     checkIn: record.checkInTime || '-',
+                    checkOut: record.checkOutTime || (currentTime >= 14 * 60 ? '오후반차' : '-'),
+                    status: record.checkOutTime 
+                        ? (record.checkOutTime === '오후반차' ? '오후반차' : '오후반차')
+                        : (record.checkInTime ? '정상' : '출근대기')
+                };
+            }
+
+            // 예외처리 데이터 우선 체크
+            const exceptionKey = `${wid}_${todayStr}`;
+            const exceptionRecord = exceptionData[exceptionKey];
+
+            if (exceptionRecord) {
+                console.log(`${worker.name} 예외처리 적용:`, exceptionRecord);
+                
+                // 출퇴근 기록 키
+                const recordKey = `${wid}_${todayStr}`;
+                
+                if (!attendanceRecords[recordKey]) {
+                    attendanceRecords[recordKey] = {
+                        checkInTime: null,
+                        checkOutTime: null,
+                        isWorkingHours: false
+                    };
+                }
+                
+                const record = attendanceRecords[recordKey];
+                
+                // 예외처리에서 설정된 출근시간 사용 (해당 시간이 되어야 출근 처리)
+                const [exHour, exMin] = exceptionRecord.checkInTime.split(':').map(Number);
+                const exceptionTime = exHour * 60 + exMin;
+
+                if (currentTime >= exceptionTime && !record.checkInTime) {
+                    record.checkInTime = exceptionRecord.checkInTime;
+                    record.isWorkingHours = true;
+                }
+                
+                // 퇴근시간은 기본 로직 사용 (18시 이후)
+                if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
+                    record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
+                }
+                
+                return {
+                    name: worker.name,
+                    team: worker.team,
+                    checkIn: record.checkInTime || '-',
                     checkOut: record.checkOutTime || '-',
-                    status: record.checkOutTime ? '퇴근' : (record.checkInTime ? '정상' : '오후반차')
+                    status: record.checkOutTime ? '퇴근' : (record.checkInTime ? '정상' : '출근대기')
                 };
             }
 
@@ -917,7 +1089,7 @@
                     const endTime = eh * 60 + em;
 
                     if (currentTime >= startTime && !record.checkInTime) {
-                        record.checkInTime = getRandomTime(sh, sm - 30, sh, sm, wid, today);
+                        record.checkInTime = getRandomTime(sh, Math.max(0, sm - 30), sh, sm, wid, today);
                         record.isWorkingHours = true;
                     }
                     if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
@@ -936,31 +1108,44 @@
                     const [eh, em] = sw.end.split(':').map(Number);
                     const endTime = eh * 60 + em;
                     
-                    if (currentTime >= 8 * 60 + 30 && !record.checkInTime) {
-                        record.checkInTime = getRandomTime(8, 30, 9, 0, wid, today);
+                    if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
+                        record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
                         record.isWorkingHours = true;
                     }
-                    if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
-                        record.checkOutTime = getRandomTime(eh, em, eh, em + 10, wid, today);
+                    
+                    // 18시 1분 이후에만 야근 상태로 처리
+                    if (currentTime >= 18 * 60 + 1) {
+                        if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
+                            record.checkOutTime = getRandomTime(eh, em, eh, em + 10, wid, today);
+                        }
+                        return {
+                            name: worker.name, 
+                            team: worker.team,
+                            checkIn: record.checkInTime || '-',
+                            checkOut: record.checkOutTime || '-',
+                            status: record.checkOutTime ? '퇴근' : (record.checkInTime ? '야근' : '출근대기')
+                        };
+                    } else {
+                        // 18시 1분 이전에는 정상 근무로 표시
+                        return {
+                            name: worker.name, 
+                            team: worker.team,
+                            checkIn: record.checkInTime || '-',
+                            checkOut: '-',
+                            status: record.checkInTime ? '정상' : '출근대기'
+                        };
                     }
-
-                    return {
-                        name: worker.name, team: worker.team,
-                        checkIn: record.checkInTime || '-',
-                        checkOut: record.checkOutTime || '-',
-                        status: record.checkOutTime ? '퇴근' : (record.checkInTime ? '야근' : '출근대기')
-                    };
                 }
             }
 
             // 기본 정상 근무
-            if (currentTime >= 8 * 60 + 30 && !record.checkInTime) {
-                record.checkInTime = getRandomTime(8, 30, 9, 0, wid, today);
+            if (currentTime >= 8 * 60 + 45 && !record.checkInTime) {
+                record.checkInTime = getRandomTime(8, 45, 9, 0, wid, today);
                 record.isWorkingHours = true;
             }
             
             if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
-                record.checkOutTime = getRandomTime(17, 50, 18, 10, wid, today);
+                record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
             }
 
             return {
@@ -972,7 +1157,7 @@
             };
         }
         
-        // 작업자 테이블 업데이트
+        // 작업자 테이블 업데이트 (오전반차 출근 이후 작업중 처리 반영)
         function updateWorkerTable() {
             if (!dataLoaded) return;
             
@@ -1001,6 +1186,7 @@
                     <table>
                         <thead>
                             <tr>
+                                <th>순번</th>
                                 <th>팀</th>
                                 <th>ID</th>
                                 <th>이름</th>
@@ -1019,43 +1205,89 @@
             container.innerHTML = tableHtml;
             const tbody = document.getElementById('workerTableBody');
 
-            workers.forEach(worker => {
-                const attendance = generateAttendance(worker);
-                
-                if (attendance.status === '연차' || attendance.status === '오전반차' || attendance.status === '오후반차') {
+            workers.forEach((worker, index) => {
+                const attendance = getCachedAttendance(worker.id);
+
+                // --- 카운트 계산 ---
+                if (attendance.status === '연차') {
                     leaveCount++;
-                } else if (attendance.status !== '퇴근' && attendance.status !== '휴무') {
+                } else if (attendance.status === '오전반차') {
+                    if (attendance.status === '오전반차') {
+                        leaveCount++;  // 오전반차는 출근 전/후 모두 leaveCount 포함
+                        if (attendance.checkIn !== '오전반차' && attendance.checkIn !== '-') {
+                            // 출근 이후에는 작업중도 카운트
+                            workingCount++;
+                        }
+                    }
+                } else if (attendance.status === '오후반차') {
+                    leaveCount++;
+                } else if (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') {
                     workingCount++;
                 }
-                
+
                 const currentWork = getWorkerCurrentWork(worker);
-                
+
+                // --- 상태 표시 ---
+                let statusHtml = '';
+                if (attendance.status === '연차') {
+                    statusHtml = '<span class="status-badge status-leave">연차</span>';
+                } else if (attendance.status === '오전반차') {
+                    statusHtml = (attendance.checkIn !== '오전반차' && attendance.checkIn !== '-')
+                        ? '<span class="status-badge status-half">오전반차</span>'
+                        : '<span class="status-badge status-half">오전반차</span>';
+                } else if (attendance.status === '오후반차') {
+                    statusHtml = '<span class="status-badge status-half">오후반차</span>';
+                } else if (attendance.status === '퇴근') {
+                    statusHtml = '<span style="color:#999;">퇴근</span>';
+                } else if (attendance.status === '휴무') {
+                    statusHtml = '<span style="color:#999;">휴무</span>';
+                } else if (attendance.status === '특근') {
+                    statusHtml = '<span class="status-badge status-special">특근</span>';
+                } else if (attendance.status === '야근') {
+                    statusHtml = '<span class="status-badge status-overtime">야근</span>';
+                } else if (attendance.status === '출근대기') {
+                    statusHtml = '<span style="color:#999;">출근대기</span>';
+                } else if (attendance.status === '특근대기') {
+                    statusHtml = '<span style="color:#999;">특근대기</span>';
+                } else if (attendance.status === '정상') {
+                    statusHtml = '<span style="color:#28a745;">근무중</span>';
+                } else {
+                    statusHtml = '<span style="color:#999;">대기중</span>';
+                }
+
+                // --- 현재 작업 표시 ---
+                let workHtml = '';
+                if (worker.team === '사업관리팀' || worker.team === '스캔팀') {
+                    if (
+                        (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
+                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-')
+                    ) {
+                        workHtml = '<span style="color: #28a745;">작업중</span>';
+                    } else {
+                        workHtml = '<span style="color: #999;">대기중</span>';
+                    }
+                } else {
+                    if (
+                        currentWork &&
+                        (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
+                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-')
+                    ) {
+                        workHtml = `<span class="serial-number">${currentWork}</span>`;
+                    } else {
+                        workHtml = '<span style="color: #999;">대기중</span>';
+                    }
+                }
+
+                // --- 테이블 행 추가 ---
                 const row = tbody.insertRow();
                 row.innerHTML = `
+                    <td>${index + 1}</td>
                     <td>${worker.team}</td>
                     <td>${worker.id}</td>
                     <td>${worker.name}</td>
                     <td>${worker.ip}</td>
-                    <td>${
-                    attendance.status === '연차' ? '<span class="status-badge status-leave">연차</span>' :
-                    attendance.status === '오전반차' ? '<span class="status-badge status-half">오전반차</span>' :
-                    attendance.status === '오후반차' ? '<span class="status-badge status-half">오후반차</span>' :
-                    attendance.status === '퇴근' ? '<span style="color:#999;">퇴근</span>' :
-                    attendance.status === '휴무' ? '<span style="color:#999;">휴무</span>' :
-                    attendance.status === '특근' ? '<span class="status-badge status-special">특근</span>' :
-                    attendance.status === '야근' ? '<span class="status-badge status-overtime">야근</span>' :
-                    '<span style="color:#28a745;">근무중</span>'
-                    }</td>
-                    <td>${
-                        (worker.team === '사업관리팀' || worker.team === '스캔팀')
-                            ? (attendance.status === '연차' || attendance.status === '오전반차' || 
-                            attendance.status === '오후반차' || attendance.status === '퇴근'
-                                ? '<span style="color: #999;">대기중</span>'
-                                : '<span style="color: #28a745;">작업중</span>')
-                            : (currentWork 
-                                ? `<span class="serial-number">${currentWork}</span>` 
-                                : '<span style="color: #999;">대기중</span>')
-                    }</td>
+                    <td>${statusHtml}</td>
+                    <td>${workHtml}</td>
                 `;
             });
             
@@ -1063,8 +1295,8 @@
             document.getElementById('workingCount').textContent = workingCount;
             document.getElementById('leaveCount').textContent = leaveCount;
         }
-        
-        // 출퇴근 테이블 업데이트
+
+        // 출퇴근 테이블 업데이트 (최적화)
         function updateAttendanceTable() {
             if (!dataLoaded) return;
             
@@ -1087,6 +1319,7 @@
                     <table>
                         <thead>
                             <tr>
+                                <th>순번</th>
                                 <th>팀</th>
                                 <th>이름</th>
                                 <th>출근 시간</th>
@@ -1104,10 +1337,11 @@
             container.innerHTML = tableHtml;
             const tbody = document.getElementById('attendanceTableBody');
             
-            workers.forEach(worker => {
-                const attendance = generateAttendance(worker);
+            workers.forEach((worker, index) => {
+                const attendance = getCachedAttendance(worker.id);
                 const row = tbody.insertRow();
                 row.innerHTML = `
+                    <td>${index + 1}</td>
                     <td>${attendance.team}</td>
                     <td>${attendance.name}</td>
                     <td>${attendance.checkIn}</td>
@@ -1122,7 +1356,7 @@
             });
         }
         
-        // 작업 현황 업데이트
+        // 작업 현황 업데이트 (최적화)
         function updateWorkStatus() {
             if (!dataLoaded) return;
             
@@ -1159,11 +1393,12 @@
                 teamsToShow.forEach(teamName => {
                     const teamWorkers = workers.filter(w => w.team === teamName);
                     const workingWorkers = teamWorkers.filter(w => {
-                        const attendance = generateAttendance(w);
+                        const attendance = getCachedAttendance(w.id);
                         return attendance.status !== '연차' && attendance.status !== '퇴근' && 
-                               attendance.status !== '오전반차' && attendance.status !== '오후반차' && attendance.status !== '휴무';
+                            attendance.status !== '오전반차' && attendance.status !== '오후반차' && 
+                            attendance.status !== '휴무' && attendance.status !== '출근대기' && 
+                            attendance.status !== '특근대기';
                     });
-                    
                     if (workingWorkers.length > 0) {
                         hasWorkingTeams = true;
                         const teamSection = document.createElement('div');
@@ -1186,10 +1421,18 @@
                             const currentWork = getWorkerCurrentWork(worker);
                             
                             if (teamName === '사업관리팀' || teamName === '스캔팀') {
+                                const attendance = getCachedAttendance(worker.id);
                                 div.innerHTML = `
                                     <h4>${worker.name} (${worker.id})</h4>
                                     <p><strong>IP:</strong> ${worker.ip}</p>
-                                    <p><strong>진행:</strong> 작업중</p>
+                                    <p><strong>상태:</strong> ${
+                                        attendance.status === '연차' || attendance.status === '오전반차' || 
+                                        attendance.status === '오후반차' || attendance.status === '퇴근' || 
+                                        attendance.status === '휴무' || attendance.status === '출근대기' ||
+                                        attendance.status === '특근대기'
+                                            ? '대기중'
+                                            : '작업중'
+                                    }</p>
                                 `;
                             } else if (currentWork) {
                                 div.innerHTML = `
@@ -1201,7 +1444,7 @@
                                 div.innerHTML = `
                                     <h4>${worker.name} (${worker.id})</h4>
                                     <p><strong>IP:</strong> ${worker.ip}</p>
-                                    <p><strong>진행:</strong> 작업 대기중</p>
+                                    <p><strong>상태:</strong> 작업 대기중</p>
                                 `;
                             }
                             teamGrid.appendChild(div);
@@ -1225,9 +1468,11 @@
                 const targetTeam = teamMap[currentTeamView];
                 const teamWorkers = workers.filter(w => w.team === targetTeam);
                 const workingWorkers = teamWorkers.filter(w => {
-                    const attendance = generateAttendance(w);
+                    const attendance = getCachedAttendance(w.id);
                     return attendance.status !== '연차' && attendance.status !== '퇴근' && 
-                           attendance.status !== '오전반차' && attendance.status !== '오후반차';
+                        attendance.status !== '오전반차' && attendance.status !== '오후반차' && 
+                        attendance.status !== '휴무' && attendance.status !== '출근대기' && 
+                        attendance.status !== '특근대기';
                 });
                 
                 if (workingWorkers.length === 0) {
@@ -1250,22 +1495,31 @@
                     const currentWork = getWorkerCurrentWork(worker);
                     
                     if (targetTeam === '사업관리팀' || targetTeam === '스캔팀') {
+                        const attendance = getCachedAttendance(worker.id);
                         div.innerHTML = `
                             <h4>${worker.name} (${worker.id})</h4>
                             <p><strong>IP:</strong> ${worker.ip}</p>
-                            <p><strong>진행:</strong> 작업중</p>
+                            <p><strong>상태:</strong> ${
+                                attendance.status === '연차' || attendance.status === '오전반차' || 
+                                attendance.status === '오후반차' || attendance.status === '퇴근' || 
+                                attendance.status === '휴무' || attendance.status === '출근대기' ||
+                                attendance.status === '특근대기'
+                                    ? '대기중'
+                                    : '작업중'
+                            }</p>
                         `;
                     } else if (currentWork) {
                         div.innerHTML = `
                             <h4>${worker.name} (${worker.id})</h4>
                             <p><strong>IP:</strong> ${worker.ip}</p>
-                            <p><strong>진행:</strong> <span class="serial-number">${currentWork}</span></p>
+                            <p><strong>상태:</strong> <span class="serial-number">${currentWork}</span></p>
                         `;
                     } else {
+                        const teamQueue = (workQueues[targetTeam] || []).filter(item => item && item.trim());
                         div.innerHTML = `
                             <h4>${worker.name} (${worker.id})</h4>
                             <p><strong>IP:</strong> ${worker.ip}</p>
-                            <p><strong>진행:</strong> 작업 대기중</p>
+                            <p><strong>상태:</strong> ${teamQueue.length === 0 ? '작업 대상 없음' : '작업 대기중'}</p>
                         `;
                     }
                     teamGrid.appendChild(div);
@@ -1290,13 +1544,13 @@
                     }
                     
                     if (!res.ok) {
-                        throw new Error(`시트 접근 실패 (${res.status}): ${res.statusText}`);
+                        throw new Error(`데이터 접근 실패 (${res.status}): ${res.statusText}`);
                     }
                     
                     const data = await res.json();
                     return data.values || [];
                 } catch (error) {
-                    showError(`시트 데이터 로드 실패 (${i + 1}/${retries}): ${error.message}`);
+                    showError(`데이터 로드 실패 (${i + 1}/${retries}): ${error.message}`);
                     
                     if (i === retries - 1) {
                         throw new Error(`최종 시도 실패: ${error.message}`);
@@ -1311,16 +1565,19 @@
         }
 
         // 모든 데이터 로드
-        async function loadAllData() {
+        async function loadAllData(showLoadingIndicator = true) {
             try {
-                showLoading();
+                if (showLoadingIndicator) {
+                    showLoading();
+                }
                 
                 // 병렬로 모든 시트 데이터 로드
-                const [workerRows, leaveRows, workRows, specialRows] = await Promise.all([
+                const [workerRows, leaveRows, workRows, specialRows, exceptionRows] = await Promise.all([
                     loadSheetData("인력구분!A:D").catch(() => []),
-                    loadSheetData("연차!A:C").catch(() => []),
+                    loadSheetData("연차!A:D").catch(() => []),
                     loadSheetData("작업량!A:F").catch(() => []),
-                    loadSheetData("특근야근관리!A:D").catch(() => [])
+                    loadSheetData("특근야근관리!A:D").catch(() => []),
+                    loadSheetData("예외처리!A:C").catch(() => [])
                 ]);
 
                 // 1. 인력구분 처리
@@ -1333,33 +1590,50 @@
 
                 // 2. 연차 처리
                 leaveStatus = {};
+                console.log("연차 원본 데이터:", leaveRows);
+
                 if (leaveRows.length > 1) {
-                    leaveRows.slice(1).forEach(r => {
-                        const rawId = normalizeId(r[0]);
-                        let normDate = null;
+                    leaveRows.slice(1).forEach((r, index) => {
+                        // 구조: A열=날짜, B열=ID, C열=이름, D열=유형
+                        const rawDate = r[0]; 
+                        const rawId = String(r[1] || '').trim().toUpperCase(); 
+                        const rawName = r[2]; 
+                        const rawType = String(r[3] || '연차').trim(); // D열에서 유형 읽기
                         
-                        if (r[1] instanceof Date) {
-                            normDate = formatDateLocal(r[1]);
-                        } else {
-                            normDate = normalizeDateString(r[1]);
+                        console.log(`연차 행 ${index + 1}:`, {rawDate, rawId, rawName, rawType});
+
+                        if (!rawId || !rawDate) {
+                            console.log(`연차 행 ${index + 1} 스킵: 필수값 누락`);
+                            return;
+                        }
+
+                        // 날짜 정규화
+                        const normDate = normalizeDateString(rawDate);
+                        if (!normDate) {
+                            console.log(`연차 행 ${index + 1} 스킵: 잘못된 날짜 형식 (${rawDate})`);
+                            return;
                         }
                         
-                        const rawType = String(r[2] || '').trim();
-
-                        if (!rawId || !normDate || !rawType) return;
-
-                        const typeMap = { 
-                            '연차': '연차', 
-                            '오전': '오전반차', 
-                            '오전반차': '오전반차', 
-                            '오후': '오후반차', 
-                            '오후반차': '오후반차' 
+                        // 유형 매핑 (대소문자 구분 없이)
+                        const typeMap = {
+                            '연차': '연차',
+                            '오전': '오전반차',
+                            '오전반차': '오전반차',
+                            '오후': '오후반차',
+                            '오후반차': '오후반차',
+                            'AM': '오전반차',
+                            'PM': '오후반차'
                         };
-                        const type = typeMap[rawType] || rawType;
+                        const finalType = typeMap[rawType.toUpperCase()] || typeMap[rawType] || '연차';
 
-                        leaveStatus[`${rawId}_${normDate}`] = type;
+                        const key = `${rawId}_${normDate}`;
+                        leaveStatus[key] = finalType;
+
+                        console.log(`연차 등록: ${key} = ${finalType}`);
                     });
                 }
+
+                console.log("최종 연차 상태:", leaveStatus);
 
                 // 3. 작업량 처리
                 workQueues = {
@@ -1388,18 +1662,65 @@
                     specialRows.slice(1).forEach(r => {
                         const [id, type, start, end] = r;
                         if (id && type) {
-                            specialWork[id] = { type, start, end };
+                            const normalizedId = normalizeId(id);
+                            specialWork[normalizedId] = { type, start, end };
                         }
                     });
                 }
+
+                // 5. 예외처리 데이터 처리 (A열: ID, B열: 이름, C열: 출근시간)
+                exceptionData = {};
+                console.log("예외처리 원본 데이터:", exceptionRows);
+
+                if (exceptionRows.length > 1) {
+                    exceptionRows.slice(1).forEach((r, index) => {
+                        const rawId = String(r[0] || '').trim().toUpperCase();
+                        const rawName = String(r[1] || '').trim();
+                        const rawCheckInTime = String(r[2] || '').trim();
+                        
+                        console.log(`예외처리 행 ${index + 1}:`, {rawId, rawName, rawCheckInTime});
+                        
+                        if (!rawId || !rawCheckInTime) {
+                            console.log(`예외처리 행 ${index + 1} 스킵: 필수값 누락`);
+                            return;
+                        }
+                        
+                        // 시간 형식 검증 (HH:MM 또는 HH:MM:SS)
+                        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+                        if (!timeRegex.test(rawCheckInTime)) {
+                            console.log(`예외처리 행 ${index + 1} 스킵: 잘못된 시간 형식 (${rawCheckInTime})`);
+                            return;
+                        }
+                        
+                        // 시간 정규화 (HH:MM:SS 형식으로 통일)
+                        const normalizedTime = rawCheckInTime.includes(':') && rawCheckInTime.split(':').length === 2 
+                            ? rawCheckInTime + ':00' 
+                            : rawCheckInTime;
+                        
+                        const today = formatDateLocal(new Date());
+                        const key = `${rawId}_${today}`;
+                        
+                        exceptionData[key] = {
+                            id: rawId,
+                            name: rawName,
+                            checkInTime: normalizedTime
+                        };
+                        
+                        console.log(`예외처리 등록: ${key} = ${normalizedTime}`);
+                    });
+                }
+
+                console.log("최종 예외처리 데이터:", exceptionData);
 
                 dataLoaded = true;
                 
                 // UI 업데이트
                 debouncedUpdate();
                 
-                hideLoading();
-                showSuccess("모든 데이터 로드 완료");
+                if (showLoadingIndicator) {
+                    hideLoading();
+                    showSuccess("모든 데이터 로드 완료");
+                }
 
             } catch (err) {
                 showError(`데이터 로드 실패: ${err.message}`);
@@ -1422,7 +1743,7 @@
         setInterval(() => {
             if (dataLoaded) {
                 console.log("자동 새로고침: 구글 시트 데이터 다시 로드");
-                loadAllData();
+                loadAllData(false);
             }
         }, CONFIG.refreshInterval);
 
