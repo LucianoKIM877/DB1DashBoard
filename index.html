@@ -1232,13 +1232,14 @@
                 if (attendance.status === '연차') {
                     leaveCount++;
                 } else if (attendance.status === '오전반차') {
-                    if (attendance.status === '오전반차') {
-                        leaveCount++;  // 오전반차는 출근 전/후 모두 leaveCount 포함
-                        if (attendance.checkIn !== '오전반차' && attendance.checkIn !== '-') {
-                            // 출근 이후에는 작업중도 카운트
-                            workingCount++;
-                        }
+                    leaveCount++;  // 오전반차는 출근 전/후 모두 leaveCount 포함
+                    if (
+                        attendance.checkIn !== '오전반차' && attendance.checkIn !== '-' &&
+                        (attendance.checkOut === '-' || !attendance.checkOut) // ✅ 퇴근 전까지만 작업중 카운트
+                    ) {
+                        workingCount++;
                     }
+                
                 } else if (attendance.status === '오후반차') {
                     leaveCount++;
                 } else if (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') {
