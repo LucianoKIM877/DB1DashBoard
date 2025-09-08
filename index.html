@@ -1066,7 +1066,7 @@
                 }
                 
                 // 퇴근시간은 기본 로직 사용 (18시 이후)
-                if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
+                if (currentTime >= 17 * 60 + 50 && record.isWorkingHours && !record.checkOutTime) {
                     record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
                 }
                 
