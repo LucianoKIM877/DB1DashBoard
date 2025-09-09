@@ -968,7 +968,7 @@
                 return { name: worker.name, team: worker.team, checkIn: '-', checkOut: '-', status: '휴무' };
             }
 
-                        // 연차 / 반차
+            // 연차 / 반차
             const leaveKey = `${wid}_${todayStr}`;
             const todayLeaveStatus = leaveStatus[leaveKey];
 
@@ -992,7 +992,8 @@
                 attendanceRecords[recordKey] = {
                     checkInTime: null,
                     checkOutTime: null,
-                    isWorkingHours: false
+                    isWorkingHours: false,
+                    plannedCheckOutTime: null
                 };
             }
             
@@ -1010,10 +1011,12 @@
                         record.isWorkingHours = true;
                     }
                 }
-                if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
-                    record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
-                }
                 
+                if (currentTime >= 18 * 60 && record.isWorkingHours) {
+                    ensurePlanned(record, getRandomTime(17, 50, 17, 52, wid, today));
+                    revealIfDue(record, currentTime);                
+                }
+
                 return {
                     name: worker.name, team: worker.team,
                     checkIn: record.checkInTime || '오전반차',
@@ -1034,14 +1037,16 @@
                         record.isWorkingHours = true;
                     }
                 }
-                if (currentTime >= 14 * 60 && record.isWorkingHours && !record.checkOutTime) {
-                    record.checkOutTime = getRandomTime(14, 0, 14, 10, wid, today);
-                }
                 
+                if (currentTime >= 14 * 60 && record.isWorkingHours) {
+                    ensurePlanned(record, getRandomTime(14, 0, 14, 10, wid, today));
+                    revealIfDue(record, currentTime);
+                }
+
                 return {
                     name: worker.name, team: worker.team,
                     checkIn: record.checkInTime || '-',
-                    checkOut: record.checkOutTime || (currentTime >= 14 * 60 ? '오후반차' : '-'),
+                    checkOut: record.checkOutTime || '-',  // 예약 전까지 비공개
                     status: '오후반차'   // ✅ 항상 오후반차로 유지
                 };
             }
@@ -1096,8 +1101,9 @@
                             record.isWorkingHours = true;
                         }
                     }
-                    if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
-                        record.checkOutTime = getRandomTime(eh, em, eh, em + 10, wid, today);
+                     if (record.isWorkingHours) {
+                         ensurePlanned(record, getRandomTime(eh, em, eh, em + 10, wid, today));
+                        if (currentTime >= endTime) revealIfDue(record, currentTime);
                     }
 
                     return {
@@ -1126,8 +1132,9 @@
                     
                     // 18시 1분 이후에만 야근 상태로 처리
                     if (currentTime >= 18 * 60 + 1) {
-                        if (currentTime >= endTime && record.isWorkingHours && !record.checkOutTime) {
-                            record.checkOutTime = getRandomTime(eh, em, eh, em + 10, wid, today);
+                        if (record.isWorkingHours) {
+                            ensurePlanned(record, getRandomTime(eh, em, eh, em + 10, wid, today));
+                            if (currentTime >= endTime) revealIfDue(record, currentTime);
                         }
                         return {
                             name: worker.name, 
@@ -1162,8 +1169,11 @@
                 }
             }
             
-            if (currentTime >= 18 * 60 && record.isWorkingHours && !record.checkOutTime) {
-                record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
+            if (currentTime >= 18 * 60 && record.isWorkingHours) {
+                // 1) 한 번만 예약
+                ensurePlanned(record, getRandomTime(17, 50, 17, 52, wid, today));
+                // 2) 예약된 시간이 되었으면 확정 → 화면 노출
+                revealIfDue(record, currentTime);
             }
 
             return {
@@ -1175,6 +1185,27 @@
             };
         }
         
+        function getNowHHMMSS(d = new Date()) {
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            const ss = String(d.getSeconds()).padStart(2, '0');
+            return `${hh}:${mm}:${ss}`;
+            }
+            function hhmmssToMinutes(t) {
+            if (!t) return null;
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+            }
+            function ensurePlanned(record, planned) {
+            if (!record.plannedCheckOutTime) record.plannedCheckOutTime = planned;
+            }
+            function revealIfDue(record, currentTimeMin) {
+            const plannedMin = hhmmssToMinutes(record.plannedCheckOutTime);
+            if (record.isWorkingHours && plannedMin != null && currentTimeMin >= plannedMin && !record.checkOutTime) {
+                record.checkOutTime = record.plannedCheckOutTime; // 이제 화면에 노출
+            }
+        }
+
         // 작업자 테이블 업데이트 (오전반차 출근 이후 작업중 처리 반영)
         function updateWorkerTable() {
             if (!dataLoaded) return;
