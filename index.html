@@ -483,7 +483,7 @@
     <!-- 사이드바 -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB2</h2>
+            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB1</h2>
             <div class="sidebar-time" id="sidebarTime"></div>
         </div>
         
@@ -583,7 +583,7 @@
     <script>
         // 설정 중앙화
         const CONFIG = {
-            sheetId: "1gX0iaVZoVqVqdJDNwFE6l9owMOivGOq3FYGegU9qfrc",
+            sheetId: "1l-hw0hAOf-bF1A9znReWjjeYskNywnr1gceX_K60-_o",
             apiKey: "AIzaSyAEjtq3ThzW2QykAVjb-kXT274afMijZ8E",
             refreshInterval: 60000, // 1분
             maxRetries: 3,
@@ -664,7 +664,7 @@
             const currentTime = Date.now();
             
             // 이미 최신 캐시가 있으면 재사용
-            if (attendanceCache.size > 0 && (currentTime - cacheTimestamp) < 5000) {
+            if (attendanceCache.size > 0 && (currentTime - cacheTimestamp) < 60000) {
                 return;
             }
             
@@ -1092,19 +1092,15 @@
                     const endTime = eh * 60 + em;
 
                     if (currentTime >= startTime && !record.checkInTime) {
-                        // record.checkInTime = getRandomTime(sh, Math.max(0, sm - 30), sh, sm, wid, today);
-                        // record.isWorkingHours = true;
-                        // 예외처리 시트에서만 출근시간 가져오기
                         const exceptionKey = `${wid}_${todayStr}`;
                         const exceptionRecord = exceptionData[exceptionKey];
-                        record.checkInTime = exceptionRecord?.checkInTime || null;
-                        if (record.checkInTime) {
-                            record.isWorkingHours = true;
-                        }
+                        record.checkInTime = exceptionRecord?.checkInTime || getRandomTime(sh, Math.max(0, sm - 30), sh, sm, wid, today);
+                        record.isWorkingHours = true;
                     }
-                     if (record.isWorkingHours) {
-                         ensurePlanned(record, getRandomTime(eh, em, eh, em + 10, wid, today));
-                        if (currentTime >= endTime) revealIfDue(record, currentTime);
+                    
+                    if (record.isWorkingHours) {
+                        ensurePlanned(record, getRandomTime(eh, em, eh, em + 10, wid, today));
+                        revealIfDue(record, currentTime);
                     }
 
                     return {
@@ -1135,7 +1131,7 @@
                     if (currentTime >= 18 * 60 + 1) {
                         if (record.isWorkingHours) {
                             ensurePlanned(record, getRandomTime(eh, em, eh, em + 10, wid, today));
-                            if (currentTime >= endTime) revealIfDue(record, currentTime);
+                            revealIfDue(record, currentTime);
                         }
                         return {
                             name: worker.name, 
@@ -1322,9 +1318,10 @@
                     }
                 } else {
                     if (
-                        currentWork &&
-                        (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
-                        (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-' && attendance.checkOut === '-')
+                        currentWork && (
+                            (['정상','특근','야근'].includes(attendance.status) && attendance.checkIn !== '-') ||
+                            (attendance.status === '오전반차' && attendance.checkIn !== '오전반차' && attendance.checkIn !== '-' && attendance.checkOut === '-')
+                        )
                     ) {
                         workHtml = `<span class="serial-number">${currentWork}</span>`;
                     } else {
