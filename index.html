@@ -483,7 +483,7 @@
     <!-- 사이드바 -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB1</h2>
+            <h2>2025년도 국회도서관<br>원문DB 구축사업 DB2</h2>
             <div class="sidebar-time" id="sidebarTime"></div>
         </div>
         
@@ -583,7 +583,7 @@
     <script>
         // 설정 중앙화
         const CONFIG = {
-            sheetId: "1l-hw0hAOf-bF1A9znReWjjeYskNywnr1gceX_K60-_o",
+            sheetId: "1gX0iaVZoVqVqdJDNwFE6l9owMOivGOq3FYGegU9qfrc",
             apiKey: "AIzaSyAEjtq3ThzW2QykAVjb-kXT274afMijZ8E",
             refreshInterval: 60000, // 1분
             maxRetries: 3,
@@ -1014,9 +1014,9 @@
                 
                 if (currentTime >= 18 * 60 && record.isWorkingHours) {
                     ensurePlanned(record, getRandomTime(17, 50, 17, 52, wid, today));
-                    revealIfDue(record, currentTime);                
+                    revealIfDue(record, currentTime); // 실제 현재시간 전달
                 }
-
+            
                 return {
                     name: worker.name, team: worker.team,
                     checkIn: record.checkInTime || '오전반차',
@@ -1068,8 +1068,9 @@
                 }
                 
                 // 퇴근시간은 기본 로직 사용 (18시 이후)
-                if (currentTime >= 17 * 60 + 50 && record.isWorkingHours && !record.checkOutTime) {
-                    record.checkOutTime = getRandomTime(17, 50, 17, 52, wid, today);
+                if (currentTime >= 17 * 60 + 50 && record.isWorkingHours) {
+                    ensurePlanned(record, getRandomTime(17, 50, 17, 52, wid, today));
+                    revealIfDue(record, currentTime);
                 }
                 
                 return {
@@ -1199,10 +1200,13 @@
             function ensurePlanned(record, planned) {
             if (!record.plannedCheckOutTime) record.plannedCheckOutTime = planned;
             }
-            function revealIfDue(record, currentTimeMin) {
+            
+        function revealIfDue(record, currentTimeMin) {
             const plannedMin = hhmmssToMinutes(record.plannedCheckOutTime);
+            
+            // 매개변수로 받은 currentTimeMin을 사용
             if (record.isWorkingHours && plannedMin != null && currentTimeMin >= plannedMin && !record.checkOutTime) {
-                record.checkOutTime = record.plannedCheckOutTime; // 이제 화면에 노출
+                record.checkOutTime = record.plannedCheckOutTime;
             }
         }
 
